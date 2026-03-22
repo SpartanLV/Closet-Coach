@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -89,6 +89,11 @@ export default function App() {
     logWear,
   } = useClosetState();
   const { wardrobe, wearLogs, settings } = state;
+  const [cityDraft, setCityDraft] = useState(settings.city);
+
+  const weatherRequestInFlight = useRef(false);
+  const calendarRequestInFlight = useRef(false);
+  const hasBootstrappedContext = useRef(false);
 
   const resolvedOccasion = settings.occasionOverride ?? calendarOccasion ?? 'Casual';
   const temperatureBucket = settings.lastWeatherSnapshot?.temperatureBucket ?? null;
@@ -111,68 +116,102 @@ export default function App() {
     setSuggestions(ranked);
   }, [ranked]);
 
-  const refreshWeather = useCallback(async () => {
-    setWeatherLoading(true);
-    const context = await openMeteoWeatherService.getContext(settings.city);
-    setWeatherLoading(false);
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+    setCityDraft(settings.city);
+  }, [isHydrated, settings.city]);
 
-    if (!context) {
-      setStatus('Weather unavailable, using wardrobe-only fallback.');
+  const refreshWeather = useCallback(async (cityOverride?: string) => {
+    if (weatherRequestInFlight.current) {
       return;
     }
 
-    setSettings({
-      city: context.city,
-      lastWeatherSnapshot: context,
-      lastContextRefresh: new Date().toISOString(),
-    });
-    setStatus(`Weather updated for ${context.city}.`);
-  }, [settings.city, setSettings]);
+    const requestedCity = (cityOverride ?? cityDraft).trim();
+    if (!requestedCity) {
+      setStatus('Please enter a city before refreshing weather.');
+      return;
+    }
+
+    weatherRequestInFlight.current = true;
+    setWeatherLoading(true);
+
+    try {
+      const context = await openMeteoWeatherService.getContext(requestedCity);
+      if (!context) {
+        setStatus('Weather unavailable, using wardrobe-only fallback.');
+        return;
+      }
+
+      setSettings({
+        city: context.city,
+        lastWeatherSnapshot: context,
+        lastContextRefresh: new Date().toISOString(),
+      });
+      setCityDraft(context.city);
+      setStatus(`Weather updated for ${context.city}.`);
+    } finally {
+      setWeatherLoading(false);
+      weatherRequestInFlight.current = false;
+    }
+  }, [cityDraft, setSettings]);
 
   const syncCalendar = useCallback(
     async (requestAccess: boolean) => {
+      if (calendarRequestInFlight.current) {
+        return;
+      }
+
+      calendarRequestInFlight.current = true;
       setCalendarLoading(true);
-      const permission = requestAccess
-        ? await requestCalendarPermission()
-        : await getCalendarPermissionStatus();
-      setSettings({
-        calendarPermission: permission,
-        lastContextRefresh: new Date().toISOString(),
-      });
 
-      if (permission !== 'granted') {
-        setCalendarLoading(false);
-        setCalendarEventTitle(null);
-        setCalendarOccasion(null);
-        if (permission === 'denied') {
-          setStatus('Calendar denied, continuing with manual occasion.');
+      try {
+        const permission = requestAccess
+          ? await requestCalendarPermission()
+          : await getCalendarPermissionStatus();
+        setSettings({
+          calendarPermission: permission,
+          lastContextRefresh: new Date().toISOString(),
+        });
+
+        if (permission !== 'granted') {
+          setCalendarEventTitle(null);
+          setCalendarOccasion(null);
+          if (permission === 'denied') {
+            setStatus('Calendar denied, continuing with manual occasion.');
+          }
+          return;
         }
-        return;
-      }
 
-      const next = await expoCalendarService.getNextOccasion();
-      setCalendarLoading(false);
-      if (!next) {
-        setCalendarEventTitle(null);
-        setCalendarOccasion(null);
-        setStatus('No upcoming event found in 24 hours.');
-        return;
-      }
+        const next = await expoCalendarService.getNextOccasion();
+        if (!next) {
+          setCalendarEventTitle(null);
+          setCalendarOccasion(null);
+          setStatus('No upcoming event found in 24 hours.');
+          return;
+        }
 
-      setCalendarEventTitle(next.eventTitle);
-      setCalendarOccasion(next.occasion);
-      setStatus(`Calendar synced from "${next.eventTitle}".`);
+        setCalendarEventTitle(next.eventTitle);
+        setCalendarOccasion(next.occasion);
+        setStatus(`Calendar synced from "${next.eventTitle}".`);
+      } finally {
+        calendarRequestInFlight.current = false;
+        setCalendarLoading(false);
+      }
     },
     [setSettings],
   );
 
   useEffect(() => {
-    if (!isHydrated) {
+    if (!isHydrated || hasBootstrappedContext.current) {
       return;
     }
-    void refreshWeather();
+
+    hasBootstrappedContext.current = true;
+    void refreshWeather(settings.city);
     void syncCalendar(false);
-  }, [isHydrated, refreshWeather, syncCalendar]);
+  }, [isHydrated, settings.city, refreshWeather, syncCalendar]);
 
   const missing = useMemo(() => {
     const required: WardrobeCategory[] = ['Top', 'Bottom', 'Shoes'];
@@ -335,13 +374,13 @@ export default function App() {
 
             <SectionCard title="Context" subtitle="Weather + calendar inputs">
               <TextInput
-                value={settings.city}
-                onChangeText={(text) => setSettings({ city: text })}
+                value={cityDraft}
+                onChangeText={setCityDraft}
                 placeholder="City (e.g. New York, US)"
                 style={styles.input}
               />
               <View style={styles.row}>
-                <TouchableOpacity style={styles.button} onPress={refreshWeather}>
+                <TouchableOpacity style={styles.button} onPress={() => { void refreshWeather(); }}>
                   <Text style={styles.buttonText}>{weatherLoading ? 'Refreshing...' : 'Refresh weather'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondary} onPress={() => syncCalendar(true)}>

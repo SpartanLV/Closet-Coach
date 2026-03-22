@@ -28,4 +28,18 @@ describe('closet state reducer', () => {
     expect(nextState.wearLogs[0].occasion).toBe('Work meeting');
     expect(nextState.wearLogs[0].outfitItemIds).toContain(trackedItemId);
   });
+
+  it('deleting an item preserves historical wear logs', () => {
+    const itemIdToDelete = defaultClosetState.wardrobe[0].id;
+    const previousLogs = defaultClosetState.wearLogs;
+
+    const nextState = closetReducer(defaultClosetState, {
+      type: 'deleteWardrobeItem',
+      payload: itemIdToDelete,
+    });
+
+    expect(nextState.wardrobe.some((item) => item.id === itemIdToDelete)).toBe(false);
+    expect(nextState.wearLogs).toEqual(previousLogs);
+    expect(nextState.wearLogs.length).toBe(previousLogs.length);
+  });
 });

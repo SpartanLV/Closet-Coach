@@ -94,13 +94,9 @@ export function closetReducer(state: ClosetState, action: ClosetAction): ClosetS
 
   if (action.type === 'deleteWardrobeItem') {
     const nextWardrobe = state.wardrobe.filter((item) => item.id !== action.payload);
-    const nextWearLogs = state.wearLogs.filter(
-      (log) => !log.outfitItemIds.includes(action.payload),
-    );
     return {
       ...state,
       wardrobe: nextWardrobe,
-      wearLogs: nextWearLogs,
     };
   }
 
