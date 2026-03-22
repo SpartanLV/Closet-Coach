@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "ClosetCoach",
+    "slug": "closet-coach",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.closetcoach.app"
+    },
+    "android": {
+      "package": "com.closetcoach.app"
+    }
+  }
+}
