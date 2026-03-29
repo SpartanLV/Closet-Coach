@@ -101,7 +101,7 @@ export const sampleSuggestions: OutfitSuggestion[] = [
     id: 'look-2',
     title: 'Hybrid Workday',
     temperatureLabel: '68°F · Breezy',
-    occasion: 'Office + commute',
+    occasion: 'Work meeting',
     items: ['Cream Blazer', 'Black Trousers'],
     rationale: 'Built around your most reliable professional layers.',
     accepted: false,

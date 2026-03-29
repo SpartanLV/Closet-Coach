@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer, useState } from 'react';
 import { sampleItems, sampleWearLogs } from './sampleData';
 import { daysSinceIso } from '../utils/date';
 import { AppSettings, ClosetState, Occasion, WardrobeItem } from '../types';
+import { consoleTelemetryService } from './telemetry';
 
 export const storageKeys = {
   wardrobe: 'closetcoach.v1.wardrobe',
@@ -208,11 +209,21 @@ export function useClosetState() {
       return;
     }
 
-    void AsyncStorage.multiSet([
-      [storageKeys.wardrobe, JSON.stringify(state.wardrobe)],
-      [storageKeys.wearLogs, JSON.stringify(state.wearLogs)],
-      [storageKeys.settings, JSON.stringify(state.settings)],
-    ]);
+    const persist = async () => {
+      try {
+        await AsyncStorage.multiSet([
+          [storageKeys.wardrobe, JSON.stringify(state.wardrobe)],
+          [storageKeys.wearLogs, JSON.stringify(state.wearLogs)],
+          [storageKeys.settings, JSON.stringify(state.settings)],
+        ]);
+      } catch (error) {
+        consoleTelemetryService.track('storage_persist_failed', {
+          reason: error instanceof Error ? error.message : 'unknown',
+        });
+      }
+    };
+
+    void persist();
   }, [state, isHydrated]);
 
   const addWardrobeItem = useCallback((item: WardrobeItem) => {
