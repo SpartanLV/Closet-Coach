@@ -1,4 +1,9 @@
-export type TelemetryEventName = 'suggestion_viewed' | 'suggestion_swapped' | 'wear_logged';
+export type TelemetryEventName =
+  | 'suggestion_viewed'
+  | 'suggestion_swapped'
+  | 'wear_logged'
+  | 'weather_refresh_failed'
+  | 'calendar_sync_failed';
 
 export type TelemetryPayload = Record<string, string | number | boolean | null | undefined>;
 
