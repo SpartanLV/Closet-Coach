@@ -165,6 +165,12 @@ export default function App() {
       });
       setCityDraft(context.city);
       setStatus(`Weather updated for ${context.city}.`);
+    } catch (error) {
+      consoleTelemetryService.track('weather_refresh_failed', {
+        city: requestedCity,
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
+      setStatus('Weather unavailable, using wardrobe-only fallback.');
     } finally {
       setWeatherLoading(false);
       weatherRequestInFlight.current = false;
@@ -209,6 +215,14 @@ export default function App() {
         setCalendarEventTitle(next.eventTitle);
         setCalendarOccasion(next.occasion);
         setStatus(`Calendar synced from "${next.eventTitle}".`);
+      } catch (error) {
+        consoleTelemetryService.track('calendar_sync_failed', {
+          request_access: requestAccess,
+          reason: error instanceof Error ? error.message : 'unknown',
+        });
+        setCalendarEventTitle(null);
+        setCalendarOccasion(null);
+        setStatus('Calendar unavailable, continuing with manual occasion.');
       } finally {
         calendarRequestInFlight.current = false;
         setCalendarLoading(false);

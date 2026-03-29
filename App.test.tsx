@@ -103,6 +103,16 @@ function findButtonByLabel(root: any, label: string) {
   });
 }
 
+function hasText(root: any, value: string): boolean {
+  return root.findAllByType(Text).some((node: any) => {
+    const children = node.props.children;
+    if (Array.isArray(children)) {
+      return children.join('') === value;
+    }
+    return children === value;
+  });
+}
+
 describe('App context input behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -193,5 +203,50 @@ describe('App context input behavior', () => {
       (call) => call[0]?.city === 'Dhaka, Bangladesh',
     );
     expect(committedCityPatch).toBe(true);
+  });
+
+  it('shows fallback status when weather service throws', async () => {
+    mockGetContext
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new Error('weather down'));
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(<App />);
+    });
+    await flushEffects();
+
+    const refreshButton = findButtonByLabel(tree.root, 'Refresh weather');
+    expect(refreshButton).toBeDefined();
+
+    await act(async () => {
+      refreshButton?.props.onPress();
+    });
+    await flushEffects();
+
+    expect(hasText(tree.root, 'Weather unavailable, using wardrobe-only fallback.')).toBe(true);
+  });
+
+  it('shows calendar unavailable status when calendar sync throws', async () => {
+    mockGetContext.mockResolvedValue(null);
+    mockRequestCalendarPermission.mockRejectedValueOnce(new Error('calendar down'));
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(<App />);
+    });
+    await flushEffects();
+
+    const syncButton = findButtonByLabel(tree.root, 'Sync calendar');
+    expect(syncButton).toBeDefined();
+
+    await act(async () => {
+      syncButton?.props.onPress();
+    });
+    await flushEffects();
+
+    expect(hasText(tree.root, 'Calendar unavailable, continuing with manual occasion.')).toBe(
+      true,
+    );
   });
 });
