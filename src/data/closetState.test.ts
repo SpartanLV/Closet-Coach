@@ -5,6 +5,69 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 import { closetReducer, defaultClosetState } from './closetState';
 
 describe('closet state reducer', () => {
+  it('hydrates with deterministic recency from provided timestamp', () => {
+    const nowIso = '2026-03-20T00:00:00.000Z';
+    const hydratedWardrobe = [
+      {
+        ...defaultClosetState.wardrobe[0],
+        lastWornAt: '2026-03-18T00:00:00.000Z',
+        lastWornDaysAgo: 999,
+      },
+    ];
+
+    const nextState = closetReducer(defaultClosetState, {
+      type: 'hydrate',
+      payload: {
+        state: {
+          wardrobe: hydratedWardrobe,
+        },
+        nowIso,
+      },
+    });
+
+    expect(nextState.wardrobe[0].lastWornDaysAgo).toBe(2);
+  });
+
+  it('adds and updates wardrobe items with deterministic recency from provided timestamp', () => {
+    const nowIso = '2026-03-20T00:00:00.000Z';
+    const baseItem = {
+      ...defaultClosetState.wardrobe[0],
+      id: 'item-deterministic',
+      lastWornAt: '2026-03-19T00:00:00.000Z',
+      lastWornDaysAgo: 999,
+    };
+
+    const withAddedItem = closetReducer(defaultClosetState, {
+      type: 'addWardrobeItem',
+      payload: {
+        item: baseItem,
+        nowIso,
+      },
+    });
+
+    expect(withAddedItem.wardrobe[0].id).toBe('item-deterministic');
+    expect(withAddedItem.wardrobe[0].lastWornDaysAgo).toBe(1);
+
+    const updatedItem = {
+      ...baseItem,
+      color: 'Black',
+      lastWornAt: '2026-03-17T00:00:00.000Z',
+      lastWornDaysAgo: 999,
+    };
+
+    const withUpdatedItem = closetReducer(withAddedItem, {
+      type: 'updateWardrobeItem',
+      payload: {
+        item: updatedItem,
+        nowIso,
+      },
+    });
+
+    const changedItem = withUpdatedItem.wardrobe.find((item) => item.id === updatedItem.id);
+    expect(changedItem?.color).toBe('Black');
+    expect(changedItem?.lastWornDaysAgo).toBe(3);
+  });
+
   it('logs wear and updates wear count + recency fields', () => {
     const trackedItemId = defaultClosetState.wardrobe[0].id;
     const beforeCount = defaultClosetState.wardrobe[0].wearCount;

@@ -25,10 +25,28 @@ export const defaultClosetState: ClosetState = {
 };
 
 export type ClosetAction =
-  | { type: 'hydrate'; payload: Partial<ClosetState> }
+  | {
+      type: 'hydrate';
+      payload: {
+        state: Partial<ClosetState>;
+        nowIso: string;
+      };
+    }
   | { type: 'setSettings'; payload: Partial<AppSettings> }
-  | { type: 'addWardrobeItem'; payload: WardrobeItem }
-  | { type: 'updateWardrobeItem'; payload: WardrobeItem }
+  | {
+      type: 'addWardrobeItem';
+      payload: {
+        item: WardrobeItem;
+        nowIso: string;
+      };
+    }
+  | {
+      type: 'updateWardrobeItem';
+      payload: {
+        item: WardrobeItem;
+        nowIso: string;
+      };
+    }
   | { type: 'deleteWardrobeItem'; payload: string }
   | {
       type: 'logWear';
@@ -36,7 +54,7 @@ export type ClosetAction =
         outfitItemIds: string[];
         occasion: Occasion;
         weatherLabel: string;
-        timestamp?: string;
+        timestamp: string;
       };
     };
 
@@ -52,14 +70,14 @@ function normalizeWardrobe(items: WardrobeItem[], now: Date): WardrobeItem[] {
 
 export function closetReducer(state: ClosetState, action: ClosetAction): ClosetState {
   if (action.type === 'hydrate') {
-    const nextWardrobe = action.payload.wardrobe ?? state.wardrobe;
-    const nextWearLogs = action.payload.wearLogs ?? state.wearLogs;
-    const nextSettings = action.payload.settings
-      ? { ...state.settings, ...action.payload.settings }
+    const nextWardrobe = action.payload.state.wardrobe ?? state.wardrobe;
+    const nextWearLogs = action.payload.state.wearLogs ?? state.wearLogs;
+    const nextSettings = action.payload.state.settings
+      ? { ...state.settings, ...action.payload.state.settings }
       : state.settings;
 
     return {
-      wardrobe: normalizeWardrobe(nextWardrobe, new Date()),
+      wardrobe: normalizeWardrobe(nextWardrobe, new Date(action.payload.nowIso)),
       wearLogs: nextWearLogs,
       settings: nextSettings,
     };
@@ -78,7 +96,7 @@ export function closetReducer(state: ClosetState, action: ClosetAction): ClosetS
   if (action.type === 'addWardrobeItem') {
     return {
       ...state,
-      wardrobe: normalizeWardrobe([action.payload, ...state.wardrobe], new Date()),
+      wardrobe: normalizeWardrobe([action.payload.item, ...state.wardrobe], new Date(action.payload.nowIso)),
     };
   }
 
@@ -86,8 +104,8 @@ export function closetReducer(state: ClosetState, action: ClosetAction): ClosetS
     return {
       ...state,
       wardrobe: normalizeWardrobe(
-        state.wardrobe.map((item) => (item.id === action.payload.id ? action.payload : item)),
-        new Date(),
+        state.wardrobe.map((item) => (item.id === action.payload.item.id ? action.payload.item : item)),
+        new Date(action.payload.nowIso),
       ),
     };
   }
@@ -100,11 +118,12 @@ export function closetReducer(state: ClosetState, action: ClosetAction): ClosetS
     };
   }
 
-  const timestamp = action.payload.timestamp ?? new Date().toISOString();
+  const timestamp = action.payload.timestamp;
   const wornIdSet = new Set(action.payload.outfitItemIds);
+  const now = new Date(timestamp);
   const nextWardrobe = state.wardrobe.map((item) => {
     if (!wornIdSet.has(item.id)) {
-      const lastWornDaysAgo = item.lastWornAt ? daysSinceIso(item.lastWornAt, new Date(timestamp)) : item.lastWornDaysAgo;
+      const lastWornDaysAgo = item.lastWornAt ? daysSinceIso(item.lastWornAt, now) : item.lastWornDaysAgo;
       return {
         ...item,
         lastWornDaysAgo,
@@ -166,9 +185,12 @@ export function useClosetState() {
       dispatch({
         type: 'hydrate',
         payload: {
-          wardrobe: wardrobe ?? defaultClosetState.wardrobe,
-          wearLogs: wearLogs ?? defaultClosetState.wearLogs,
-          settings: settings ?? defaultClosetState.settings,
+          state: {
+            wardrobe: wardrobe ?? defaultClosetState.wardrobe,
+            wearLogs: wearLogs ?? defaultClosetState.wearLogs,
+            settings: settings ?? defaultClosetState.settings,
+          },
+          nowIso: new Date().toISOString(),
         },
       });
       setIsHydrated(true);
@@ -194,11 +216,23 @@ export function useClosetState() {
   }, [state, isHydrated]);
 
   const addWardrobeItem = useCallback((item: WardrobeItem) => {
-    dispatch({ type: 'addWardrobeItem', payload: item });
+    dispatch({
+      type: 'addWardrobeItem',
+      payload: {
+        item,
+        nowIso: new Date().toISOString(),
+      },
+    });
   }, []);
 
   const updateWardrobeItem = useCallback((item: WardrobeItem) => {
-    dispatch({ type: 'updateWardrobeItem', payload: item });
+    dispatch({
+      type: 'updateWardrobeItem',
+      payload: {
+        item,
+        nowIso: new Date().toISOString(),
+      },
+    });
   }, []);
 
   const deleteWardrobeItem = useCallback((itemId: string) => {
@@ -211,7 +245,13 @@ export function useClosetState() {
 
   const logWear = useCallback(
     (payload: { outfitItemIds: string[]; occasion: Occasion; weatherLabel: string }) => {
-      dispatch({ type: 'logWear', payload });
+      dispatch({
+        type: 'logWear',
+        payload: {
+          ...payload,
+          timestamp: new Date().toISOString(),
+        },
+      });
     },
     [],
   );
