@@ -23,6 +23,7 @@ import {
   rankOutfits,
   swapCandidateItem,
 } from './src/data/recommendationEngine';
+import { consoleTelemetryService } from './src/data/telemetry';
 import { openMeteoWeatherService } from './src/data/weatherService';
 import { colors, spacing } from './src/theme/tokens';
 import {
@@ -138,10 +139,23 @@ export default function App() {
     setWeatherLoading(true);
 
     try {
-      const context = await openMeteoWeatherService.getContext(requestedCity);
-      if (!context) {
-        setStatus('Weather unavailable, using wardrobe-only fallback.');
-        return;
+      let context = null;
+      if (typeof openMeteoWeatherService.getContextResult === 'function') {
+        const result = await openMeteoWeatherService.getContextResult(requestedCity);
+        if (!result.ok) {
+          const staleSuffix = settings.lastWeatherSnapshot
+            ? ` Keeping last weather from ${new Date(settings.lastWeatherSnapshot.fetchedAt).toLocaleTimeString()}.`
+            : '';
+          setStatus(`${result.error.message} Using wardrobe-only fallback.${staleSuffix}`);
+          return;
+        }
+        context = result.context;
+      } else {
+        context = await openMeteoWeatherService.getContext(requestedCity);
+        if (!context) {
+          setStatus('Weather unavailable, using wardrobe-only fallback.');
+          return;
+        }
       }
 
       setSettings({
@@ -155,7 +169,7 @@ export default function App() {
       setWeatherLoading(false);
       weatherRequestInFlight.current = false;
     }
-  }, [cityDraft, setSettings]);
+  }, [cityDraft, setSettings, settings.lastWeatherSnapshot]);
 
   const syncCalendar = useCallback(
     async (requestAccess: boolean) => {
@@ -292,6 +306,11 @@ export default function App() {
       occasion: resolvedOccasion,
       weatherLabel: temperatureLabel,
     });
+    consoleTelemetryService.track('wear_logged', {
+      outfit_id: candidate.id,
+      item_count: candidate.itemIds.length,
+      occasion: resolvedOccasion,
+    });
     setStatus('Wear logged.');
   };
 
@@ -313,7 +332,26 @@ export default function App() {
         );
       }),
     );
+    consoleTelemetryService.track('suggestion_swapped', {
+      outfit_id: candidateId,
+      category,
+    });
   };
+
+  useEffect(() => {
+    if (!suggestions.length) {
+      return;
+    }
+    const top = suggestions[0];
+    if (!top) {
+      return;
+    }
+    consoleTelemetryService.track('suggestion_viewed', {
+      outfit_id: top.id,
+      score: Number(top.score.toFixed(1)),
+      suggestion_count: suggestions.length,
+    });
+  }, [suggestions]);
 
   const insights = useMemo(() => {
     const dormant = wardrobe.filter((item) => item.lastWornDaysAgo >= 14).length;

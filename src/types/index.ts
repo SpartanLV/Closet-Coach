@@ -56,6 +56,24 @@ export type WeatherContext = {
   fetchedAt: string;
 };
 
+export type ServiceErrorCode =
+  | 'invalid_input'
+  | 'network_error'
+  | 'timeout'
+  | 'upstream_error'
+  | 'not_found'
+  | 'unknown';
+
+export type ServiceError = {
+  code: ServiceErrorCode;
+  message: string;
+  retryable: boolean;
+};
+
+export type WeatherContextResult =
+  | { ok: true; context: WeatherContext }
+  | { ok: false; error: ServiceError };
+
 export type InferredOccasion = {
   occasion: Occasion;
   eventTitle: string;
@@ -102,6 +120,7 @@ export type ClosetState = {
 
 export interface WeatherService {
   getContext(city: string): Promise<WeatherContext | null>;
+  getContextResult(city: string): Promise<WeatherContextResult>;
 }
 
 export interface CalendarService {
