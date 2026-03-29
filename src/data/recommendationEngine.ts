@@ -260,17 +260,23 @@ export function swapCandidateItem(params: {
     nextItemIds.push(nextId);
   }
 
-  requiredCategories.forEach((requiredCategory) => {
+  for (const requiredCategory of requiredCategories) {
     const hasRequiredCategory = nextItemIds.some(
       (itemId) => itemsById[itemId]?.category === requiredCategory,
     );
     if (!hasRequiredCategory) {
-      const fallbackItem = items.find((item) => item.category === requiredCategory);
-      if (fallbackItem) {
-        nextItemIds.push(fallbackItem.id);
+      const compatibleFallbackItems = items
+        .filter((item) => item.category === requiredCategory)
+        .filter((item) => isItemCompatible(item, occasion, temperatureBucket))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+
+      if (!compatibleFallbackItems.length) {
+        return candidate;
       }
+
+      nextItemIds.push(compatibleFallbackItems[0].id);
     }
-  });
+  }
 
   return toOutfitCandidate(
     [...new Set(nextItemIds)],
@@ -281,4 +287,3 @@ export function swapCandidateItem(params: {
     params.now ?? new Date(),
   );
 }
-
