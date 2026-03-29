@@ -3,7 +3,8 @@ export type TelemetryEventName =
   | 'suggestion_swapped'
   | 'wear_logged'
   | 'weather_refresh_failed'
-  | 'calendar_sync_failed';
+  | 'calendar_sync_failed'
+  | 'storage_persist_failed';
 
 export type TelemetryPayload = Record<string, string | number | boolean | null | undefined>;
 

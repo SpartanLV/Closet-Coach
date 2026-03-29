@@ -29,7 +29,7 @@ export type OutfitSuggestion = {
   id: string;
   title: string;
   temperatureLabel: string;
-  occasion: string;
+  occasion: Occasion;
   items: string[];
   rationale: string;
   accepted: boolean;

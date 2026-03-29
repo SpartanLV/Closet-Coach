@@ -12,6 +12,7 @@ import { daysSinceIso } from '../utils/date';
 
 const requiredCategories: Array<WardrobeCategory> = ['Top', 'Bottom', 'Shoes'];
 const swappableCategories: Array<WardrobeCategory> = ['Top', 'Bottom', 'Shoes', 'Outerwear'];
+const maxGeneratedCandidates = 500;
 
 const seasonBucketMap: Record<Season, TemperatureBucket[]> = {
   'All-season': ['cold', 'mild', 'warm'],
@@ -166,9 +167,9 @@ function buildCandidates(
   }
 
   const candidates: OutfitCandidate[] = [];
-  tops.forEach((top) => {
-    bottoms.forEach((bottom) => {
-      shoes.forEach((shoe) => {
+  for (const top of tops) {
+    for (const bottom of bottoms) {
+      for (const shoe of shoes) {
         const baseItemIds = [top.id, bottom.id, shoe.id];
         const maybeBase = toOutfitCandidate(
           baseItemIds,
@@ -182,7 +183,7 @@ function buildCandidates(
           candidates.push(maybeBase);
         }
 
-        outerwear.forEach((layer) => {
+        for (const layer of outerwear) {
           const withLayer = toOutfitCandidate(
             [top.id, bottom.id, shoe.id, layer.id],
             itemsById,
@@ -194,10 +195,23 @@ function buildCandidates(
           if (withLayer) {
             candidates.push(withLayer);
           }
-        });
-      });
-    });
-  });
+          if (candidates.length >= maxGeneratedCandidates) {
+            break;
+          }
+        }
+
+        if (candidates.length >= maxGeneratedCandidates) {
+          break;
+        }
+      }
+      if (candidates.length >= maxGeneratedCandidates) {
+        break;
+      }
+    }
+    if (candidates.length >= maxGeneratedCandidates) {
+      break;
+    }
+  }
 
   const deduped = new Map<string, OutfitCandidate>();
   candidates.forEach((candidate) => {

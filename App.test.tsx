@@ -3,7 +3,7 @@ import renderer, { act } from 'react-test-renderer';
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 import { ClosetState } from './src/types';
 
-const mockGetContext = jest.fn();
+const mockGetContextResult = jest.fn();
 const mockGetCalendarPermissionStatus = jest.fn();
 const mockRequestCalendarPermission = jest.fn();
 const mockGetNextOccasion = jest.fn();
@@ -12,7 +12,7 @@ const mockUseClosetState = jest.fn();
 
 jest.mock('./src/data/weatherService', () => ({
   openMeteoWeatherService: {
-    getContext: (...args: unknown[]) => mockGetContext(...args),
+    getContextResult: (...args: unknown[]) => mockGetContextResult(...args),
   },
 }));
 
@@ -117,7 +117,14 @@ describe('App context input behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockGetContext.mockResolvedValue(null);
+    mockGetContextResult.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'upstream_error',
+        message: 'Weather provider is temporarily unavailable.',
+        retryable: true,
+      },
+    });
     mockGetCalendarPermissionStatus.mockResolvedValue('denied');
     mockRequestCalendarPermission.mockResolvedValue('denied');
     mockGetNextOccasion.mockResolvedValue(null);
@@ -140,8 +147,8 @@ describe('App context input behavior', () => {
     });
     await flushEffects();
 
-    expect(mockGetContext).toHaveBeenCalledTimes(1);
-    expect(mockGetContext).toHaveBeenCalledWith('New York, US');
+    expect(mockGetContextResult).toHaveBeenCalledTimes(1);
+    expect(mockGetContextResult).toHaveBeenCalledWith('New York, US');
     expect(mockGetCalendarPermissionStatus).toHaveBeenCalledTimes(1);
 
     const cityInput = tree.root.findByProps({
@@ -155,7 +162,7 @@ describe('App context input behavior', () => {
     });
     await flushEffects();
 
-    expect(mockGetContext).toHaveBeenCalledTimes(1);
+    expect(mockGetContextResult).toHaveBeenCalledTimes(1);
     expect(mockGetCalendarPermissionStatus).toHaveBeenCalledTimes(1);
 
     const typedCityPersisted = mockSetSettings.mock.calls.some(
@@ -165,16 +172,26 @@ describe('App context input behavior', () => {
   });
 
   it('commits city update only when refresh weather is explicitly pressed', async () => {
-    mockGetContext
-      .mockResolvedValueOnce(null)
+    mockGetContextResult
       .mockResolvedValueOnce({
-        city: 'Dhaka, Bangladesh',
-        temperatureC: 29,
-        temperatureF: 84.2,
-        temperatureBucket: 'warm',
-        weatherCode: 1,
-        weatherLabel: '84°F · Mostly clear',
-        fetchedAt: '2026-03-22T00:00:00.000Z',
+        ok: false,
+        error: {
+          code: 'upstream_error',
+          message: 'Weather provider is temporarily unavailable.',
+          retryable: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        context: {
+          city: 'Dhaka, Bangladesh',
+          temperatureC: 29,
+          temperatureF: 84.2,
+          temperatureBucket: 'warm',
+          weatherCode: 1,
+          weatherLabel: '84°F · Mostly clear',
+          fetchedAt: '2026-03-22T00:00:00.000Z',
+        },
       });
 
     let tree: any;
@@ -196,8 +213,8 @@ describe('App context input behavior', () => {
     });
     await flushEffects();
 
-    expect(mockGetContext).toHaveBeenCalledTimes(2);
-    expect(mockGetContext.mock.calls[1][0]).toBe('Dhaka, Bangladesh');
+    expect(mockGetContextResult).toHaveBeenCalledTimes(2);
+    expect(mockGetContextResult.mock.calls[1][0]).toBe('Dhaka, Bangladesh');
 
     const committedCityPatch = mockSetSettings.mock.calls.some(
       (call) => call[0]?.city === 'Dhaka, Bangladesh',
@@ -206,8 +223,15 @@ describe('App context input behavior', () => {
   });
 
   it('shows fallback status when weather service throws', async () => {
-    mockGetContext
-      .mockResolvedValueOnce(null)
+    mockGetContextResult
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'upstream_error',
+          message: 'Weather provider is temporarily unavailable.',
+          retryable: true,
+        },
+      })
       .mockRejectedValueOnce(new Error('weather down'));
 
     let tree: any;
@@ -228,7 +252,14 @@ describe('App context input behavior', () => {
   });
 
   it('shows calendar unavailable status when calendar sync throws', async () => {
-    mockGetContext.mockResolvedValue(null);
+    mockGetContextResult.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'upstream_error',
+        message: 'Weather provider is temporarily unavailable.',
+        retryable: true,
+      },
+    });
     mockRequestCalendarPermission.mockRejectedValueOnce(new Error('calendar down'));
 
     let tree: any;
