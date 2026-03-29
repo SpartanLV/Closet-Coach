@@ -186,4 +186,93 @@ describe('recommendation engine', () => {
 
     expect(results.length).toBeGreaterThan(0);
   });
+
+  it('does not add incompatible required-category fallback items during swap', () => {
+    const items: WardrobeItem[] = [
+      {
+        id: 'top-1',
+        name: 'Alpha Tee',
+        category: 'Top',
+        color: 'Blue',
+        season: 'All-season',
+        occasionTags: ['Casual'],
+        temperatureRange: ['cold', 'mild'],
+        wearCount: 1,
+        lastWornDaysAgo: 5,
+      },
+      {
+        id: 'top-2',
+        name: 'Beta Tee',
+        category: 'Top',
+        color: 'Black',
+        season: 'All-season',
+        occasionTags: ['Casual'],
+        temperatureRange: ['cold', 'mild'],
+        wearCount: 2,
+        lastWornDaysAgo: 7,
+      },
+      {
+        id: 'bottom-1',
+        name: 'Relaxed Jeans',
+        category: 'Bottom',
+        color: 'Indigo',
+        season: 'All-season',
+        occasionTags: ['Casual'],
+        temperatureRange: ['cold', 'mild'],
+        wearCount: 3,
+        lastWornDaysAgo: 3,
+      },
+      {
+        id: 'outer-1',
+        name: 'Rain Shell',
+        category: 'Outerwear',
+        color: 'Gray',
+        season: 'Cool',
+        occasionTags: ['Casual'],
+        temperatureRange: ['cold'],
+        wearCount: 1,
+        lastWornDaysAgo: 10,
+      },
+      {
+        id: 'shoes-warm-only',
+        name: 'Beach Sandals',
+        category: 'Shoes',
+        color: 'Tan',
+        season: 'Warm',
+        occasionTags: ['Casual'],
+        temperatureRange: ['warm'],
+        wearCount: 0,
+        lastWornDaysAgo: 20,
+      },
+    ];
+
+    const candidateMissingShoes = {
+      id: 'top-1|bottom-1|outer-1',
+      itemIds: ['top-1', 'bottom-1', 'outer-1'],
+      score: 0,
+      scoreBreakdown: {
+        contextFit: 0,
+        wearRotation: 0,
+        recencyBoost: 0,
+        completeness: 0,
+      },
+      occasion: 'Casual' as Occasion,
+      temperatureLabel: '38°F · Rain',
+    };
+
+    const swapped = swapCandidateItem({
+      candidate: candidateMissingShoes,
+      items,
+      category: 'Top',
+      occasion: 'Casual',
+      temperatureBucket: 'cold',
+      temperatureLabel: '38°F · Rain',
+      now: new Date('2026-03-22T00:00:00.000Z'),
+    });
+
+    expect(swapped).not.toBeNull();
+    expect(swapped).toEqual(candidateMissingShoes);
+    expect(swapped?.itemIds).toEqual(candidateMissingShoes.itemIds);
+    expect(swapped?.itemIds).not.toContain('shoes-warm-only');
+  });
 });
