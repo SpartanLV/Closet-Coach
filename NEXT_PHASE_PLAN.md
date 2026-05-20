@@ -142,7 +142,7 @@ Standardize event schema and required attributes for:
 - Ensure CI runs:
   - `npm run typecheck`
   - `npm test -- --watch=false`
-- Add lint + formatting checks as required gates.
+- Add lint + formatting checks as required gates (lint + format:check scripts).
 
 ---
 
