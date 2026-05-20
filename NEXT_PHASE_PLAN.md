@@ -90,7 +90,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 
 ## 2) Architecture & Code Health (P0/P1)
 
-### 2.1 Decompose `App.tsx` (P0) — **In progress**
+### 2.1 Decompose `App.tsx` (P0) — **Implemented**
 
 - Split into feature-focused modules:
   - `features/today/*`
@@ -99,7 +99,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 - Introduce `hooks/useContextSync.ts` for weather/calendar orchestration.
 - Keep pure logic in `src/data/*`, and view logic in feature components.
 
-### 2.2 State flow hardening (P0) — **In progress**
+### 2.2 State flow hardening (P0) — **Implemented (baseline)**
 
 - Add explicit handling of persistence read/write failures in UI status messaging.
 - Add retry strategy for hydration on transient storage failures.
@@ -117,7 +117,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 
 ## 3) Reliability, Observability, and Release Discipline (P0/P1)
 
-### 3.1 Telemetry baseline (P0) — **In progress**
+### 3.1 Telemetry baseline (P0) — **Implemented (baseline)**
 
 Standardize event schema and required attributes for:
 
@@ -142,7 +142,7 @@ Standardize event schema and required attributes for:
 - Ensure CI runs:
   - `npm run typecheck`
   - `npm test -- --watch=false`
-- Add lint + formatting checks as required gates.
+- Add lint + formatting checks as required gates (lint + format:check scripts).
 
 ---
 
@@ -190,3 +190,12 @@ Standardize event schema and required attributes for:
 2. Implement onboarding v2 skeleton with progress state and minimal UX copy.
 3. Define telemetry payload schema and enforce required fields in one utility.
 4. Add large-wardrobe recommendation benchmark fixture and baseline numbers.
+
+
+## Post-PR Follow-ups (from review comments)
+
+1. Tighten typing in feature tabs (`TodayTab`, `WardrobeTab`, `InsightsTab`) by removing `any` props.
+2. Add focused unit tests for `useContextSync` and rendering-level tests for extracted tab components.
+3. Replace temporary lint/format script aliases with real ESLint/Prettier commands once package install constraints are resolved.
+4. Validate CI in a fully provisioned Expo environment where `expo/tsconfig.base` is available.
+

@@ -154,15 +154,24 @@ export function closetReducer(state: ClosetState, action: ClosetAction): ClosetS
   };
 }
 
-async function readStoredJson<T>(key: string): Promise<T | null> {
+type StoredJsonResult<T> =
+  | { ok: true; data: T | null }
+  | { ok: false; reason: 'read_failed' | 'invalid_json' };
+
+async function readStoredJson<T>(key: string): Promise<StoredJsonResult<T>> {
   try {
     const raw = await AsyncStorage.getItem(key);
     if (!raw) {
-      return null;
+      return { ok: true, data: null };
     }
-    return JSON.parse(raw) as T;
+
+    try {
+      return { ok: true, data: JSON.parse(raw) as T };
+    } catch {
+      return { ok: false, reason: 'invalid_json' };
+    }
   } catch {
-    return null;
+    return { ok: false, reason: 'read_failed' };
   }
 }
 
@@ -170,12 +179,15 @@ export function useClosetState() {
   const [state, dispatch] = useReducer(closetReducer, defaultClosetState);
   const [isHydrated, setIsHydrated] = useState(false);
   const [persistenceError, setPersistenceError] = useState<string | null>(null);
+  const [hydrationError, setHydrationError] = useState<string | null>(null);
+  const [hydrateAttempt, setHydrateAttempt] = useState(0);
   const lastPersistErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const hydrate = async () => {
-      const [wardrobe, wearLogs, settings] = await Promise.all([
+      setHydrationError(null);
+      const [wardrobeResult, wearLogsResult, settingsResult] = await Promise.all([
         readStoredJson<WardrobeItem[]>(storageKeys.wardrobe),
         readStoredJson<ClosetState['wearLogs']>(storageKeys.wearLogs),
         readStoredJson<AppSettings>(storageKeys.settings),
@@ -185,13 +197,30 @@ export function useClosetState() {
         return;
       }
 
+      const failures = [
+        [storageKeys.wardrobe, wardrobeResult],
+        [storageKeys.wearLogs, wearLogsResult],
+        [storageKeys.settings, settingsResult],
+      ] as const;
+
+      failures.forEach(([key, result]) => {
+        if (!result.ok) {
+          consoleTelemetryService.track('storage_hydrate_failed', { key, reason: result.reason });
+        }
+      });
+
+      const hasFailure = failures.some(([, result]) => !result.ok);
+      if (hasFailure) {
+        setHydrationError('Some local data could not be loaded. Default data has been restored.');
+      }
+
       dispatch({
         type: 'hydrate',
         payload: {
           state: {
-            wardrobe: wardrobe ?? defaultClosetState.wardrobe,
-            wearLogs: wearLogs ?? defaultClosetState.wearLogs,
-            settings: settings ?? defaultClosetState.settings,
+            wardrobe: wardrobeResult.ok && wardrobeResult.data ? wardrobeResult.data : defaultClosetState.wardrobe,
+            wearLogs: wearLogsResult.ok && wearLogsResult.data ? wearLogsResult.data : defaultClosetState.wearLogs,
+            settings: settingsResult.ok && settingsResult.data ? settingsResult.data : defaultClosetState.settings,
           },
           nowIso: new Date().toISOString(),
         },
@@ -204,7 +233,7 @@ export function useClosetState() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [hydrateAttempt]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -259,6 +288,12 @@ export function useClosetState() {
     dispatch({ type: 'setSettings', payload: settingsPatch });
   }, []);
 
+  const retryHydration = useCallback(() => {
+    setIsHydrated(false);
+    setHydrationError(null);
+    setHydrateAttempt((current) => current + 1);
+  }, []);
+
   const logWear = useCallback(
     (payload: { outfitItemIds: string[]; occasion: Occasion; weatherLabel: string }) => {
       dispatch({
@@ -281,5 +316,7 @@ export function useClosetState() {
     deleteWardrobeItem,
     setSettings,
     logWear,
+    hydrationError,
+    retryHydration,
   };
 }
