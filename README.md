@@ -163,6 +163,8 @@ Run all checks:
 ```bash
 npm run typecheck
 npm run test -- --watch=false
+npm run lint
+npm run format:check
 ```
 
 ---
