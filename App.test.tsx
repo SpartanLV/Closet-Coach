@@ -137,6 +137,7 @@ describe('App context input behavior', () => {
       deleteWardrobeItem: jest.fn(),
       setSettings: mockSetSettings,
       logWear: jest.fn(),
+      persistenceError: null,
     });
   });
 
@@ -280,4 +281,26 @@ describe('App context input behavior', () => {
       true,
     );
   });
+
+  it('shows a storage warning banner when persistence error is present', async () => {
+    mockUseClosetState.mockReturnValue({
+      state: createMockState(),
+      isHydrated: true,
+      addWardrobeItem: jest.fn(),
+      updateWardrobeItem: jest.fn(),
+      deleteWardrobeItem: jest.fn(),
+      setSettings: mockSetSettings,
+      logWear: jest.fn(),
+      persistenceError: 'disk full',
+    });
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(<App />);
+    });
+    await flushEffects();
+
+    expect(hasText(tree.root, 'Storage warning: disk full')).toBe(true);
+  });
+
 });

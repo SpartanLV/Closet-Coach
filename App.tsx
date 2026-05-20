@@ -88,6 +88,7 @@ export default function App() {
     deleteWardrobeItem,
     setSettings,
     logWear,
+    persistenceError,
   } = useClosetState();
   const { wardrobe, wearLogs, settings } = state;
   const [cityDraft, setCityDraft] = useState(settings.city);
@@ -413,6 +414,7 @@ export default function App() {
         </View>
 
         {status ? <Text style={styles.status}>{status}</Text> : null}
+        {persistenceError ? <Text style={styles.warningStatus}>Storage warning: {persistenceError}</Text> : null}
 
         {activeTab === 'Today' ? (
           <>
@@ -622,6 +624,17 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 30, fontWeight: '800' },
   subtle: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   status: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  warningStatus: {
+    color: '#9a6700',
+    backgroundColor: '#fff4d6',
+    borderColor: '#f2cc60',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   tabs: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, padding: 6, gap: spacing.xs },
   tab: { flex: 1, alignItems: 'center', borderRadius: 10, paddingVertical: spacing.sm },
   tabActive: { backgroundColor: colors.primary },

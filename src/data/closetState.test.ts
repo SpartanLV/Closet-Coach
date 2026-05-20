@@ -2,7 +2,10 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-import { closetReducer, defaultClosetState } from './closetState';
+import React from 'react';
+import renderer, { act } from 'react-test-renderer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { closetReducer, defaultClosetState, useClosetState } from './closetState';
 
 describe('closet state reducer', () => {
   it('hydrates with deterministic recency from provided timestamp', () => {
@@ -104,5 +107,53 @@ describe('closet state reducer', () => {
     expect(nextState.wardrobe.some((item) => item.id === itemIdToDelete)).toBe(false);
     expect(nextState.wearLogs).toEqual(previousLogs);
     expect(nextState.wearLogs.length).toBe(previousLogs.length);
+  });
+});
+
+describe('useClosetState persistence error signal', () => {
+  it('surfaces and dedupes persistence warnings from multiSet failures', async () => {
+    const firstError = new Error('disk full');
+    (AsyncStorage.multiSet as jest.Mock)
+      .mockRejectedValueOnce(firstError)
+      .mockRejectedValueOnce(firstError)
+      .mockRejectedValueOnce(new Error('permission denied'));
+
+    const snapshots: Array<{ persistenceError: string | null; addWardrobeItem: (item: any) => void }> = [];
+
+    function Harness() {
+      const closet = useClosetState();
+      snapshots.push({ persistenceError: closet.persistenceError, addWardrobeItem: closet.addWardrobeItem });
+      return null;
+    }
+
+    await act(async () => {
+      renderer.create(React.createElement(Harness));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(snapshots.at(-1)?.persistenceError).toBe('disk full');
+
+    await act(async () => {
+      snapshots.at(-1)?.addWardrobeItem({
+        ...defaultClosetState.wardrobe[0],
+        id: 'new-1',
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(snapshots.at(-1)?.persistenceError).toBe('disk full');
+
+    await act(async () => {
+      snapshots.at(-1)?.addWardrobeItem({
+        ...defaultClosetState.wardrobe[0],
+        id: 'new-2',
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(snapshots.at(-1)?.persistenceError).toBe('permission denied');
   });
 });
