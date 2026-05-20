@@ -96,6 +96,49 @@ function itemById(items: WardrobeItem[], itemId: string): WardrobeItem {
   return found;
 }
 
+
+function buildLargeWardrobeFixture(): WardrobeItem[] {
+  const items: WardrobeItem[] = [];
+
+  for (let index = 0; index < 20; index += 1) {
+    items.push({
+      id: `top-${index}`,
+      name: `Top ${index}`,
+      category: 'Top',
+      color: 'Blue',
+      season: 'All-season',
+      occasionTags: ['Casual'],
+      temperatureRange: ['mild'],
+      wearCount: index < 19 ? 50 : 0,
+      lastWornDaysAgo: index < 19 ? 1 : 30,
+    });
+    items.push({
+      id: `bottom-${index}`,
+      name: `Bottom ${index}`,
+      category: 'Bottom',
+      color: 'Black',
+      season: 'All-season',
+      occasionTags: ['Casual'],
+      temperatureRange: ['mild'],
+      wearCount: index < 19 ? 50 : 0,
+      lastWornDaysAgo: index < 19 ? 1 : 30,
+    });
+    items.push({
+      id: `shoes-${index}`,
+      name: `Shoes ${index}`,
+      category: 'Shoes',
+      color: 'White',
+      season: 'All-season',
+      occasionTags: ['Casual'],
+      temperatureRange: ['mild'],
+      wearCount: index < 19 ? 50 : 0,
+      lastWornDaysAgo: index < 19 ? 1 : 30,
+    });
+  }
+
+  return items;
+}
+
 describe('recommendation engine', () => {
   it('returns top 3 ranked outfits with deterministic order', () => {
     const input = {
@@ -187,6 +230,30 @@ describe('recommendation engine', () => {
     expect(results.length).toBeGreaterThan(0);
   });
 
+
+  it('keeps high-quality later-ordered combinations and remains deterministic when candidate count is large', () => {
+    const items = buildLargeWardrobeFixture();
+    const input = {
+      items,
+      occasion: 'Casual' as Occasion,
+      temperatureBucket: 'mild' as const,
+      temperatureLabel: '68°F · Clear',
+      now: new Date('2026-03-22T00:00:00.000Z'),
+    };
+
+    const firstRun = rankOutfits(input);
+    const secondRun = rankOutfits(input);
+
+    expect(firstRun.map((candidate) => candidate.id)).toEqual(
+      secondRun.map((candidate) => candidate.id),
+    );
+
+    expect(firstRun.length).toBe(3);
+    const topIds = new Set(firstRun.flatMap((candidate) => candidate.itemIds));
+    expect(topIds.has('top-19')).toBe(true);
+    expect(topIds.has('bottom-19')).toBe(true);
+    expect(topIds.has('shoes-19')).toBe(true);
+  });
   it('does not add incompatible required-category fallback items during swap', () => {
     const items: WardrobeItem[] = [
       {

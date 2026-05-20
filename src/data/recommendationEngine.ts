@@ -147,6 +147,56 @@ function toOutfitCandidate(
   };
 }
 
+function getProxyRankedItems(items: WardrobeItem[], now: Date): WardrobeItem[] {
+  return [...items].sort((a, b) => {
+    const recencyDiff = getItemRecencyDays(b, now) - getItemRecencyDays(a, now);
+    if (recencyDiff !== 0) {
+      return recencyDiff;
+    }
+
+    if (a.wearCount !== b.wearCount) {
+      return a.wearCount - b.wearCount;
+    }
+
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function capItemsByProxy(items: WardrobeItem[], now: Date, limit: number): WardrobeItem[] {
+  if (items.length <= limit) {
+    return items;
+  }
+  return getProxyRankedItems(items, now).slice(0, limit);
+}
+
+function insertTopCandidate(topCandidates: OutfitCandidate[], candidate: OutfitCandidate, limit: number): void {
+  if (topCandidates.length < limit) {
+    topCandidates.push(candidate);
+    return;
+  }
+
+  let worstIndex = 0;
+  for (let index = 1; index < topCandidates.length; index += 1) {
+    const current = topCandidates[index];
+    const worst = topCandidates[worstIndex];
+    if (
+      current.score < worst.score
+      || (current.score === worst.score && current.id.localeCompare(worst.id) > 0)
+    ) {
+      worstIndex = index;
+    }
+  }
+
+  const worst = topCandidates[worstIndex];
+  const shouldReplace =
+    candidate.score > worst.score
+    || (candidate.score === worst.score && candidate.id.localeCompare(worst.id) < 0);
+
+  if (shouldReplace) {
+    topCandidates[worstIndex] = candidate;
+  }
+}
+
 function buildCandidates(
   input: RecommendationInput,
   ignoreOccasion: boolean,
@@ -157,16 +207,30 @@ function buildCandidates(
     isItemCompatible(item, input.occasion, input.temperatureBucket, ignoreOccasion),
   );
 
-  const tops = compatibleItems.filter((item) => item.category === 'Top');
-  const bottoms = compatibleItems.filter((item) => item.category === 'Bottom');
-  const shoes = compatibleItems.filter((item) => item.category === 'Shoes');
-  const outerwear = compatibleItems.filter((item) => item.category === 'Outerwear');
+  let tops = compatibleItems.filter((item) => item.category === 'Top');
+  let bottoms = compatibleItems.filter((item) => item.category === 'Bottom');
+  let shoes = compatibleItems.filter((item) => item.category === 'Shoes');
+  let outerwear = compatibleItems.filter((item) => item.category === 'Outerwear');
 
   if (!tops.length || !bottoms.length || !shoes.length) {
     return [];
   }
 
-  const candidates: OutfitCandidate[] = [];
+  const estimateCombinations =
+    tops.length * bottoms.length * shoes.length * Math.max(1, outerwear.length + 1);
+  const pruningEstimateThreshold = maxGeneratedCandidates * 2;
+
+  if (estimateCombinations > pruningEstimateThreshold) {
+    const perCategoryLimit = 16;
+    tops = capItemsByProxy(tops, now, perCategoryLimit);
+    bottoms = capItemsByProxy(bottoms, now, perCategoryLimit);
+    shoes = capItemsByProxy(shoes, now, perCategoryLimit);
+    outerwear = capItemsByProxy(outerwear, now, perCategoryLimit);
+  }
+
+  const topCandidates: OutfitCandidate[] = [];
+  const deduped = new Map<string, OutfitCandidate>();
+
   for (const top of tops) {
     for (const bottom of bottoms) {
       for (const shoe of shoes) {
@@ -179,8 +243,9 @@ function buildCandidates(
           input.temperatureLabel,
           now,
         );
-        if (maybeBase) {
-          candidates.push(maybeBase);
+        if (maybeBase && !deduped.has(maybeBase.id)) {
+          deduped.set(maybeBase.id, maybeBase);
+          insertTopCandidate(topCandidates, maybeBase, maxGeneratedCandidates);
         }
 
         for (const layer of outerwear) {
@@ -192,32 +257,16 @@ function buildCandidates(
             input.temperatureLabel,
             now,
           );
-          if (withLayer) {
-            candidates.push(withLayer);
-          }
-          if (candidates.length >= maxGeneratedCandidates) {
-            break;
+          if (withLayer && !deduped.has(withLayer.id)) {
+            deduped.set(withLayer.id, withLayer);
+            insertTopCandidate(topCandidates, withLayer, maxGeneratedCandidates);
           }
         }
-
-        if (candidates.length >= maxGeneratedCandidates) {
-          break;
-        }
       }
-      if (candidates.length >= maxGeneratedCandidates) {
-        break;
-      }
-    }
-    if (candidates.length >= maxGeneratedCandidates) {
-      break;
     }
   }
 
-  const deduped = new Map<string, OutfitCandidate>();
-  candidates.forEach((candidate) => {
-    deduped.set(candidate.id, candidate);
-  });
-  return [...deduped.values()];
+  return topCandidates;
 }
 
 export function rankOutfits(input: RecommendationInput): OutfitCandidate[] {
