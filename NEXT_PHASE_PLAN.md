@@ -49,9 +49,17 @@ Move from “working MVP” to “retention-ready v1” by improving:
 
 ## Workstreams
 
+## Status legend
+
+- **Implemented**
+- **In progress**
+- **Planned**
+
+---
+
 ## 1) Product & UX (P0/P1)
 
-### 1.1 Guided onboarding v2 (P0)
+### 1.1 Guided onboarding v2 (P0) — **In progress**
 
 - Introduce explicit step flow:
   1. city setup,
@@ -61,7 +69,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 - Add quick-add templates to reduce cold-start effort.
 - Improve empty states for missing required categories.
 
-### 1.2 Explicit recommendation feedback (P0)
+### 1.2 Explicit recommendation feedback (P0) — **Planned**
 
 - Add actions on each suggestion:
   - “Love it”,
@@ -70,7 +78,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 - Persist lightweight preference events and use as ranking modifiers.
 - Keep deterministic fallback ranking for robustness.
 
-### 1.3 Actionable insights (P1)
+### 1.3 Actionable insights (P1) — **Planned**
 
 - Add “wear this next” prompts for neglected items.
 - Add weekly summary cards:
@@ -82,7 +90,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 
 ## 2) Architecture & Code Health (P0/P1)
 
-### 2.1 Decompose `App.tsx` (P0)
+### 2.1 Decompose `App.tsx` (P0) — **In progress**
 
 - Split into feature-focused modules:
   - `features/today/*`
@@ -91,13 +99,13 @@ Move from “working MVP” to “retention-ready v1” by improving:
 - Introduce `hooks/useContextSync.ts` for weather/calendar orchestration.
 - Keep pure logic in `src/data/*`, and view logic in feature components.
 
-### 2.2 State flow hardening (P0)
+### 2.2 State flow hardening (P0) — **In progress**
 
 - Add explicit handling of persistence read/write failures in UI status messaging.
 - Add retry strategy for hydration on transient storage failures.
 - Document persistence schema versioning strategy for future migrations.
 
-### 2.3 Recommendation scalability & quality (P1)
+### 2.3 Recommendation scalability & quality (P1) — **Planned**
 
 - Replace brute-force generation with staged candidate pruning:
   - pre-rank top-N per category,
@@ -109,7 +117,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 
 ## 3) Reliability, Observability, and Release Discipline (P0/P1)
 
-### 3.1 Telemetry baseline (P0)
+### 3.1 Telemetry baseline (P0) — **In progress**
 
 Standardize event schema and required attributes for:
 
@@ -120,7 +128,7 @@ Standardize event schema and required attributes for:
 - storage_persist_failed
 - wear_logged
 
-### 3.2 Test depth increase (P0)
+### 3.2 Test depth increase (P0) — **In progress**
 
 - Add reducer and recommendation edge-case coverage for:
   - large wardrobes,
@@ -129,7 +137,7 @@ Standardize event schema and required attributes for:
 - Add one happy-path integration test for:
   - add item → refresh context → get suggestion → wear log.
 
-### 3.3 CI quality gates (P0)
+### 3.3 CI quality gates (P0) — **Implemented**
 
 - Ensure CI runs:
   - `npm run typecheck`
