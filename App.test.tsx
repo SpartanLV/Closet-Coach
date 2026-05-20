@@ -4,6 +4,7 @@ import { Text, TextInput, TouchableOpacity } from 'react-native';
 import { ClosetState } from './src/types';
 
 const mockGetContextResult = jest.fn();
+const mockGetContext = jest.fn();
 const mockGetCalendarPermissionStatus = jest.fn();
 const mockRequestCalendarPermission = jest.fn();
 const mockGetNextOccasion = jest.fn();
@@ -13,6 +14,7 @@ const mockUseClosetState = jest.fn();
 jest.mock('./src/data/weatherService', () => ({
   openMeteoWeatherService: {
     getContextResult: (...args: unknown[]) => mockGetContextResult(...args),
+    getContext: (...args: unknown[]) => mockGetContext(...args),
   },
 }));
 
@@ -125,6 +127,7 @@ describe('App context input behavior', () => {
         retryable: true,
       },
     });
+    mockGetContext.mockResolvedValue(null);
     mockGetCalendarPermissionStatus.mockResolvedValue('denied');
     mockRequestCalendarPermission.mockResolvedValue('denied');
     mockGetNextOccasion.mockResolvedValue(null);
@@ -302,5 +305,97 @@ describe('App context input behavior', () => {
 
     expect(hasText(tree.root, 'Storage warning: disk full')).toBe(true);
   });
+
+
+describe('App refreshWeather service contracts', () => {
+  it('modern result-contract path: retains getContextResult behavior', async () => {
+    mockGetContextResult
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'upstream_error',
+          message: 'Weather provider is temporarily unavailable.',
+          retryable: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        context: {
+          city: 'Seattle, US',
+          temperatureC: 16,
+          temperatureF: 60.8,
+          temperatureBucket: 'mild',
+          weatherCode: 2,
+          weatherLabel: '61°F · Partly cloudy',
+          fetchedAt: '2026-03-22T00:00:00.000Z',
+        },
+      });
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(<App />);
+    });
+    await flushEffects();
+
+    const refreshButton = findButtonByLabel(tree.root, 'Refresh weather');
+    await act(async () => {
+      refreshButton?.props.onPress();
+    });
+    await flushEffects();
+
+    expect(mockGetContextResult).toHaveBeenCalledTimes(2);
+    expect(mockGetContext).not.toHaveBeenCalled();
+    expect(hasText(tree.root, 'Weather updated for Seattle, US.')).toBe(true);
+  });
+
+  it('legacy fallback path: uses getContext and handles null/error as wardrobe-only fallback', async () => {
+    const { openMeteoWeatherService } = jest.requireMock('./src/data/weatherService');
+    const originalGetContextResult = openMeteoWeatherService.getContextResult;
+    openMeteoWeatherService.getContextResult = undefined;
+
+    mockGetContext
+      .mockResolvedValueOnce({
+        city: 'Austin, US',
+        temperatureC: 26,
+        temperatureF: 78.8,
+        temperatureBucket: 'warm',
+        weatherCode: 1,
+        weatherLabel: '79°F · Mostly clear',
+        fetchedAt: '2026-03-22T00:00:00.000Z',
+      })
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new Error('legacy down'));
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(<App />);
+    });
+    await flushEffects();
+
+    const refreshButton = findButtonByLabel(tree.root, 'Refresh weather');
+
+    await act(async () => {
+      refreshButton?.props.onPress();
+    });
+    await flushEffects();
+
+    const committedCityPatch = mockSetSettings.mock.calls.some((call) => call[0]?.city === 'Austin, US');
+    expect(committedCityPatch).toBe(true);
+    await act(async () => {
+      refreshButton?.props.onPress();
+    });
+    await flushEffects();
+    expect(hasText(tree.root, 'Weather unavailable, using wardrobe-only fallback.')).toBe(true);
+
+    await act(async () => {
+      refreshButton?.props.onPress();
+    });
+    await flushEffects();
+    expect(hasText(tree.root, 'Weather unavailable, using wardrobe-only fallback.')).toBe(true);
+
+    expect(mockGetContext).toHaveBeenCalledTimes(4);
+    openMeteoWeatherService.getContextResult = originalGetContextResult;
+  });
+});
 
 });
