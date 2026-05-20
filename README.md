@@ -87,7 +87,7 @@ ClosetCoach aims to reduce decision fatigue and wardrobe waste by making outfit 
 ├── src
 │   ├── components                   # Shared presentational UI blocks
 │   ├── data                         # State, services, recommendation logic, fixtures
-│   ├── features                     # Feature-level UI modules (scaffold and reusable)
+│   ├── features                     # Feature-level UI modules (current + expanding)
 │   ├── theme                        # Design tokens (colors, spacing)
 │   ├── types                        # Domain and service contracts
 │   └── utils                        # Generic helpers (date/network)
@@ -169,9 +169,16 @@ npm run test -- --watch=false
 
 ## Core architecture notes
 
+### Planned refactor (not yet implemented)
+
+- Feature slice split from `App.tsx` into `src/features/today/*`, `src/features/wardrobe/*`, and `src/features/insights/*`.
+- Add orchestration hook `src/hooks/useContextSync.ts` for weather/calendar sync.
+
+
+
 ### 1) App orchestration (`App.tsx`)
 
-`App.tsx` currently coordinates tabs, context refresh, suggestion rendering, and CRUD controls. This is intentional for MVP speed, with a planned split into feature slices in future phases.
+`App.tsx` currently coordinates tabs, context refresh, suggestion rendering, and CRUD controls. This is intentional for MVP speed.
 
 ### 2) State and persistence (`src/data/closetState.ts`)
 
