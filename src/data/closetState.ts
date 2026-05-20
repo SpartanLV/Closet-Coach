@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { sampleItems, sampleWearLogs } from './sampleData';
 import { daysSinceIso } from '../utils/date';
 import { AppSettings, ClosetState, Occasion, WardrobeItem } from '../types';
@@ -169,6 +169,8 @@ async function readStoredJson<T>(key: string): Promise<T | null> {
 export function useClosetState() {
   const [state, dispatch] = useReducer(closetReducer, defaultClosetState);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [persistenceError, setPersistenceError] = useState<string | null>(null);
+  const lastPersistErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -217,9 +219,12 @@ export function useClosetState() {
           [storageKeys.settings, JSON.stringify(state.settings)],
         ]);
       } catch (error) {
-        consoleTelemetryService.track('storage_persist_failed', {
-          reason: error instanceof Error ? error.message : 'unknown',
-        });
+        const reason = error instanceof Error ? error.message : 'unknown';
+        consoleTelemetryService.track('storage_persist_failed', { reason });
+        if (lastPersistErrorRef.current !== reason) {
+          lastPersistErrorRef.current = reason;
+          setPersistenceError(reason);
+        }
       }
     };
 
@@ -270,6 +275,7 @@ export function useClosetState() {
   return {
     state,
     isHydrated,
+    persistenceError,
     addWardrobeItem,
     updateWardrobeItem,
     deleteWardrobeItem,
