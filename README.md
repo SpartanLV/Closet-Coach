@@ -134,6 +134,8 @@ npm run android    # Start and target Android
 npm run web        # Start and target web
 npm run typecheck  # TypeScript checks only
 npm run test       # Jest unit/integration tests
+npm run lint       # Current alias to typecheck (temporary)
+npm run format:check # Current alias to typecheck (temporary)
 ```
 
 ---
@@ -163,17 +165,30 @@ Run all checks:
 ```bash
 npm run typecheck
 npm run test -- --watch=false
+npm run lint
+npm run format:check
 ```
 
 ---
 
 ## Core architecture notes
 
-### Planned refactor (not yet implemented)
+### Refactor status (implemented)
 
-- Feature slice split from `App.tsx` into `src/features/today/*`, `src/features/wardrobe/*`, and `src/features/insights/*`.
-- Add orchestration hook `src/hooks/useContextSync.ts` for weather/calendar sync.
+- `App.tsx` is now a thinner shell and delegates tab rendering to:
+  - `src/features/today/TodayTab.tsx`
+  - `src/features/wardrobe/WardrobeTab.tsx`
+  - `src/features/insights/InsightsTab.tsx`
+- Weather/calendar orchestration now lives in `src/hooks/useContextSync.ts`.
+- Telemetry now uses typed event payload contracts in `src/data/telemetry.ts`.
+- Hydration failures are surfaced via UI state (`hydrationError`) with retry support (`retryHydration`).
 
+### Follow-up cleanup identified during review
+
+- ✅ Replace `any` props in feature tabs with explicit prop types.
+- ✅ Add app-level regression coverage for extracted tab behavior via `App.test.tsx`.
+- ✅ Add focused orchestration tests for `useContextSync` in `src/hooks/useContextSync.test.tsx`.
+- Revisit lint/format scripts once dependency policy allows full ESLint/Prettier integration.
 
 
 ### 1) App orchestration (`App.tsx`)

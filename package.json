@@ -9,7 +9,11 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest --runInBand",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run typecheck",
+    "lint:fix": "npm run typecheck",
+    "format:check": "npm run typecheck",
+    "format": "npm run typecheck"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.23.1",
