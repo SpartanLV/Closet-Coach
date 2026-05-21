@@ -11,6 +11,7 @@ export const occasionOptions = ['Work meeting', 'Social', 'Active', 'Casual'] as
 export type Occasion = (typeof occasionOptions)[number];
 
 export type CalendarPermissionState = 'unknown' | 'granted' | 'denied' | 'unavailable';
+export type SuggestionFeedbackKind = 'love_it' | 'not_for_today' | 'too_hot' | 'too_cold';
 
 export type WardrobeItem = {
   id: string;
@@ -23,6 +24,13 @@ export type WardrobeItem = {
   wearCount: number;
   lastWornDaysAgo: number;
   lastWornAt?: string | null;
+};
+
+export type SuggestionFeedback = {
+  id: string;
+  outfitId: string;
+  kind: SuggestionFeedbackKind;
+  timestamp: string;
 };
 
 export type OutfitSuggestion = {
@@ -41,7 +49,6 @@ export type WearLog = {
   timestamp: string;
   occasion: Occasion;
   weatherLabel: string;
-  // Backward-compatible fields for older sample data/UI modules.
   itemId?: string;
   date?: string;
 };
@@ -56,29 +63,10 @@ export type WeatherContext = {
   fetchedAt: string;
 };
 
-export type ServiceErrorCode =
-  | 'invalid_input'
-  | 'network_error'
-  | 'timeout'
-  | 'upstream_error'
-  | 'not_found'
-  | 'unknown';
-
-export type ServiceError = {
-  code: ServiceErrorCode;
-  message: string;
-  retryable: boolean;
-};
-
-export type WeatherContextResult =
-  | { ok: true; context: WeatherContext }
-  | { ok: false; error: ServiceError };
-
-export type InferredOccasion = {
-  occasion: Occasion;
-  eventTitle: string;
-  startsAt: string;
-};
+export type ServiceErrorCode = 'invalid_input' | 'network_error' | 'timeout' | 'upstream_error' | 'not_found' | 'unknown';
+export type ServiceError = { code: ServiceErrorCode; message: string; retryable: boolean };
+export type WeatherContextResult = { ok: true; context: WeatherContext } | { ok: false; error: ServiceError };
+export type InferredOccasion = { occasion: Occasion; eventTitle: string; startsAt: string };
 
 export type AppSettings = {
   city: string;
@@ -93,6 +81,7 @@ export type RecommendationScoreBreakdown = {
   wearRotation: number;
   recencyBoost: number;
   completeness: number;
+  feedbackAdjustment: number;
 };
 
 export type OutfitCandidate = {
@@ -109,6 +98,7 @@ export type RecommendationInput = {
   occasion: Occasion;
   temperatureBucket: TemperatureBucket | null;
   temperatureLabel: string;
+  feedbackHistory?: SuggestionFeedback[];
   now?: Date;
 };
 
@@ -116,6 +106,7 @@ export type ClosetState = {
   wardrobe: WardrobeItem[];
   wearLogs: WearLog[];
   settings: AppSettings;
+  feedbackHistory: SuggestionFeedback[];
 };
 
 export interface WeatherService {

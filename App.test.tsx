@@ -82,6 +82,7 @@ function createMockState(): ClosetState {
       lastContextRefresh: null,
       lastWeatherSnapshot: null,
     },
+    feedbackHistory: [],
   };
 }
 
@@ -348,23 +349,28 @@ describe('App refreshWeather service contracts', () => {
     expect(hasText(tree.root, 'Weather updated for Seattle, US.')).toBe(true);
   });
 
-  it('legacy fallback path: uses getContext and handles null/error as wardrobe-only fallback', async () => {
-    const { openMeteoWeatherService } = jest.requireMock('./src/data/weatherService');
-    const originalGetContextResult = openMeteoWeatherService.getContextResult;
-    openMeteoWeatherService.getContextResult = undefined;
-
-    mockGetContext
+  it('does not use legacy getContext path when getContextResult exists', async () => {
+    mockGetContextResult
       .mockResolvedValueOnce({
-        city: 'Austin, US',
-        temperatureC: 26,
-        temperatureF: 78.8,
-        temperatureBucket: 'warm',
-        weatherCode: 1,
-        weatherLabel: '79°F · Mostly clear',
-        fetchedAt: '2026-03-22T00:00:00.000Z',
+        ok: false,
+        error: {
+          code: 'upstream_error',
+          message: 'Weather provider is temporarily unavailable.',
+          retryable: true,
+        },
       })
-      .mockResolvedValueOnce(null)
-      .mockRejectedValueOnce(new Error('legacy down'));
+      .mockResolvedValueOnce({
+        ok: true,
+        context: {
+          city: 'Austin, US',
+          temperatureC: 26,
+          temperatureF: 78.8,
+          temperatureBucket: 'warm',
+          weatherCode: 1,
+          weatherLabel: '79°F · Mostly clear',
+          fetchedAt: '2026-03-22T00:00:00.000Z',
+        },
+      });
 
     let tree: any;
     await act(async () => {
@@ -373,7 +379,6 @@ describe('App refreshWeather service contracts', () => {
     await flushEffects();
 
     const refreshButton = findButtonByLabel(tree.root, 'Refresh weather');
-
     await act(async () => {
       refreshButton?.props.onPress();
     });
@@ -381,20 +386,7 @@ describe('App refreshWeather service contracts', () => {
 
     const committedCityPatch = mockSetSettings.mock.calls.some((call) => call[0]?.city === 'Austin, US');
     expect(committedCityPatch).toBe(true);
-    await act(async () => {
-      refreshButton?.props.onPress();
-    });
-    await flushEffects();
-    expect(hasText(tree.root, 'Weather unavailable, using wardrobe-only fallback.')).toBe(true);
-
-    await act(async () => {
-      refreshButton?.props.onPress();
-    });
-    await flushEffects();
-    expect(hasText(tree.root, 'Weather unavailable, using wardrobe-only fallback.')).toBe(true);
-
-    expect(mockGetContext).toHaveBeenCalledTimes(4);
-    openMeteoWeatherService.getContextResult = originalGetContextResult;
+    expect(mockGetContext).not.toHaveBeenCalled();
   });
 });
 

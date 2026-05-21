@@ -1,24 +1,54 @@
-export type TelemetryEventName =
-  | 'suggestion_viewed'
-  | 'suggestion_swapped'
-  | 'wear_logged'
-  | 'weather_refresh_failed'
-  | 'calendar_sync_failed'
-  | 'storage_persist_failed';
+export type TelemetryEventMap = {
+  suggestion_viewed: {
+    outfit_id: string;
+    score: number;
+    suggestion_count: number;
+  };
+  suggestion_swapped: {
+    outfit_id: string;
+    category: string;
+  };
+  wear_logged: {
+    outfit_id: string;
+    item_count: number;
+    occasion: string;
+  };
+  suggestion_feedback: {
+    outfit_id: string;
+    feedback: 'love_it' | 'not_for_today' | 'too_hot' | 'too_cold';
+  };
+  weather_refresh_failed: {
+    city: string;
+    reason: string;
+  };
+  calendar_sync_failed: {
+    request_access: boolean;
+    reason: string;
+  };
+  storage_persist_failed: {
+    reason: string;
+  };
+  storage_hydrate_failed: {
+    key: string;
+    reason: string;
+  };
+};
 
-export type TelemetryPayload = Record<string, string | number | boolean | null | undefined>;
+export type TelemetryEventName = keyof TelemetryEventMap;
 
 export interface TelemetryService {
-  track(event: TelemetryEventName, payload?: TelemetryPayload): void;
+  track<E extends TelemetryEventName>(event: E, payload: TelemetryEventMap[E]): void;
 }
 
 export const consoleTelemetryService: TelemetryService = {
-  track(event, payload = {}) {
+  track(event, payload) {
     if (process.env.NODE_ENV === 'test') {
       return;
     }
-    // Replace with analytics SDK integration in a future phase.
     // eslint-disable-next-line no-console
-    console.log(`[telemetry] ${event}`, payload);
+    console.log('[telemetry]', event, {
+      ...payload,
+      trackedAt: new Date().toISOString(),
+    });
   },
 };

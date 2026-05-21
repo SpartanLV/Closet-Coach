@@ -86,6 +86,8 @@ function scoreCandidate(
   occasion: Occasion,
   temperatureBucket: TemperatureBucket | null,
   now: Date,
+  outfitId: string,
+  feedbackHistory: RecommendationInput['feedbackHistory'],
 ): RecommendationScoreBreakdown {
   const contextFit = candidateItems.reduce((sum, item) => {
     if (!item.occasionTags.length) {
@@ -110,11 +112,15 @@ function scoreCandidate(
     completeness -= 2;
   }
 
+  const feedbackForOutfit = (feedbackHistory ?? []).filter((entry) => entry.outfitId === outfitId);
+  const feedbackAdjustment = feedbackForOutfit.reduce((sum, entry) => sum + (entry.kind === 'love_it' ? 6 : entry.kind === 'not_for_today' ? -4 : -3), 0);
+
   return {
     contextFit,
     wearRotation,
     recencyBoost,
     completeness,
+    feedbackAdjustment,
   };
 }
 
@@ -125,6 +131,7 @@ function toOutfitCandidate(
   temperatureBucket: TemperatureBucket | null,
   temperatureLabel: string,
   now: Date,
+  inputFeedbackHistory: RecommendationInput['feedbackHistory'],
 ): OutfitCandidate | null {
   const candidateItems = itemIds
     .map((itemId) => itemsById[itemId])
@@ -134,8 +141,9 @@ function toOutfitCandidate(
     return null;
   }
 
-  const breakdown = scoreCandidate(candidateItems, occasion, temperatureBucket, now);
-  const score = breakdown.contextFit + breakdown.wearRotation + breakdown.recencyBoost + breakdown.completeness;
+  const outfitId = itemIds.join('|');
+  const breakdown = scoreCandidate(candidateItems, occasion, temperatureBucket, now, outfitId, inputFeedbackHistory);
+  const score = breakdown.contextFit + breakdown.wearRotation + breakdown.recencyBoost + breakdown.completeness + breakdown.feedbackAdjustment;
 
   return {
     id: itemIds.join('|'),
@@ -242,6 +250,7 @@ function buildCandidates(
           input.temperatureBucket,
           input.temperatureLabel,
           now,
+          input.feedbackHistory,
         );
         if (maybeBase && !deduped.has(maybeBase.id)) {
           deduped.set(maybeBase.id, maybeBase);
@@ -256,6 +265,7 @@ function buildCandidates(
             input.temperatureBucket,
             input.temperatureLabel,
             now,
+            input.feedbackHistory,
           );
           if (withLayer && !deduped.has(withLayer.id)) {
             deduped.set(withLayer.id, withLayer);
@@ -348,5 +358,6 @@ export function swapCandidateItem(params: {
     temperatureBucket,
     temperatureLabel,
     params.now ?? new Date(),
+    undefined,
   );
 }
