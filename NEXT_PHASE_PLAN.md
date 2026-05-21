@@ -128,7 +128,7 @@ Standardize event schema and required attributes for:
 - storage_persist_failed
 - wear_logged
 
-### 3.2 Test depth increase (P0) — **In progress**
+### 3.2 Test depth increase (P0) — **Implemented (baseline + hook coverage)**
 
 - Add reducer and recommendation edge-case coverage for:
   - large wardrobes,
@@ -195,7 +195,7 @@ Standardize event schema and required attributes for:
 ## Post-PR Follow-ups (from review comments)
 
 1. Tighten typing in feature tabs (`TodayTab`, `WardrobeTab`, `InsightsTab`) by removing `any` props.
-2. Add focused unit tests for `useContextSync` and rendering-level tests for extracted tab components.
+2. ✅ Add focused unit tests for `useContextSync` and maintain rendering-level regression coverage through `App.test.tsx`.
 3. Replace temporary lint/format script aliases with real ESLint/Prettier commands once package install constraints are resolved (blocked by registry policy in current environment).
 4. Validate CI in a fully provisioned Expo environment where `expo/tsconfig.base` is available.
 

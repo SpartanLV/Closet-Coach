@@ -186,8 +186,8 @@ npm run format:check
 ### Follow-up cleanup identified during review
 
 - ✅ Replace `any` props in feature tabs with explicit prop types.
-- ✅ Add smoke tests for extracted tab components (`TodayTab`, `WardrobeTab`, `InsightsTab`).
-- ⏳ Add deeper orchestration tests for `useContextSync` (next increment).
+- ✅ Add app-level regression coverage for extracted tab behavior via `App.test.tsx`.
+- ✅ Add focused orchestration tests for `useContextSync` in `src/hooks/useContextSync.test.tsx`.
 - Revisit lint/format scripts once dependency policy allows full ESLint/Prettier integration.
 
 
