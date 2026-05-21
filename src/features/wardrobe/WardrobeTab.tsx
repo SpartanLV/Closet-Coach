@@ -1,7 +1,8 @@
 import React from 'react';
 import { Dispatch, SetStateAction } from 'react';
-import { StyleProp, Text, TextInput, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SectionCard } from '../../components/SectionCard';
+import { TextStyleProp, ViewStyleProp } from '../types';
 import { Occasion, WardrobeCategory, WardrobeItem, categoryOptions, occasionOptions, seasonOptions, Season } from '../../types';
 
 export type WardrobeFormState = {
@@ -13,20 +14,20 @@ export type WardrobeFormState = {
 };
 
 type WardrobeStyles = {
-  input: StyleProp<TextStyle>;
-  wrap: StyleProp<ViewStyle>;
-  tag: StyleProp<ViewStyle>;
-  tagActive: StyleProp<ViewStyle>;
-  tagText: StyleProp<TextStyle>;
-  tagTextActive: StyleProp<TextStyle>;
-  row: StyleProp<ViewStyle>;
-  button: StyleProp<ViewStyle>;
-  buttonText: StyleProp<TextStyle>;
-  secondary: StyleProp<ViewStyle>;
-  secondaryText: StyleProp<TextStyle>;
-  inventory: StyleProp<ViewStyle>;
-  line: StyleProp<TextStyle>;
-  subtle: StyleProp<TextStyle>;
+  input: TextStyleProp;
+  wrap: ViewStyleProp;
+  tag: ViewStyleProp;
+  tagActive: ViewStyleProp;
+  tagText: TextStyleProp;
+  tagTextActive: TextStyleProp;
+  row: ViewStyleProp;
+  button: ViewStyleProp;
+  buttonText: TextStyleProp;
+  secondary: ViewStyleProp;
+  secondaryText: TextStyleProp;
+  inventory: ViewStyleProp;
+  line: TextStyleProp;
+  subtle: TextStyleProp;
 };
 
 export type WardrobeTabProps = {

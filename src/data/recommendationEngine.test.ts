@@ -254,6 +254,31 @@ describe('recommendation engine', () => {
     expect(topIds.has('bottom-19')).toBe(true);
     expect(topIds.has('shoes-19')).toBe(true);
   });
+
+  it('boosts outfits with positive feedback and penalizes negative feedback deterministically', () => {
+    const base = rankOutfits({
+      items: baseItems,
+      occasion: 'Casual',
+      temperatureBucket: 'mild',
+      temperatureLabel: '64°F · Cloudy',
+      now: new Date('2026-03-22T00:00:00.000Z'),
+    });
+    const targetId = base[0].id;
+    const withFeedback = rankOutfits({
+      items: baseItems,
+      occasion: 'Casual',
+      temperatureBucket: 'mild',
+      temperatureLabel: '64°F · Cloudy',
+      feedbackHistory: [
+        { id: 'f1', outfitId: targetId, kind: 'love_it', timestamp: '2026-03-22T00:00:00.000Z' },
+        { id: 'f2', outfitId: base[1]?.id ?? targetId, kind: 'too_hot', timestamp: '2026-03-22T00:01:00.000Z' },
+      ],
+      now: new Date('2026-03-22T00:00:00.000Z'),
+    });
+    expect(withFeedback[0].id).toBe(targetId);
+    expect(withFeedback[0].scoreBreakdown.feedbackAdjustment).toBeGreaterThanOrEqual(6);
+  });
+
   it('does not add incompatible required-category fallback items during swap', () => {
     const items: WardrobeItem[] = [
       {
@@ -322,6 +347,7 @@ describe('recommendation engine', () => {
         wearRotation: 0,
         recencyBoost: 0,
         completeness: 0,
+        feedbackAdjustment: 0,
       },
       occasion: 'Casual' as Occasion,
       temperatureLabel: '38°F · Rain',

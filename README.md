@@ -45,6 +45,7 @@ ClosetCoach aims to reduce decision fatigue and wardrobe waste by making outfit 
 ### Today tab
 
 - Onboarding progress indicators.
+- Suggestion feedback actions (Love it / Not today / Too hot / Too cold) persisted for ranking.
 - City input + weather refresh.
 - Calendar permission/sync controls.
 - Occasion override chips.
@@ -134,8 +135,8 @@ npm run android    # Start and target Android
 npm run web        # Start and target web
 npm run typecheck  # TypeScript checks only
 npm run test       # Jest unit/integration tests
-npm run lint       # Current alias to typecheck (temporary)
-npm run format:check # Current alias to typecheck (temporary)
+npm run lint       # ESLint checks
+npm run format:check # Prettier check
 ```
 
 ---

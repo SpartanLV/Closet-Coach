@@ -69,7 +69,7 @@ Move from “working MVP” to “retention-ready v1” by improving:
 - Add quick-add templates to reduce cold-start effort.
 - Improve empty states for missing required categories.
 
-### 1.2 Explicit recommendation feedback (P0) — **Planned**
+### 1.2 Explicit recommendation feedback (P0) — **Implemented (baseline)**
 
 - Add actions on each suggestion:
   - “Love it”,
@@ -137,7 +137,7 @@ Standardize event schema and required attributes for:
 - Add one happy-path integration test for:
   - add item → refresh context → get suggestion → wear log.
 
-### 3.3 CI quality gates (P0) — **Implemented**
+### 3.3 CI quality gates (P0) — **Implemented (expanded)**
 
 - Ensure CI runs:
   - `npm run typecheck`
@@ -196,6 +196,8 @@ Standardize event schema and required attributes for:
 
 1. Tighten typing in feature tabs (`TodayTab`, `WardrobeTab`, `InsightsTab`) by removing `any` props.
 2. ✅ Add focused unit tests for `useContextSync` and maintain rendering-level regression coverage through `App.test.tsx`.
+3. ✅ Implement suggestion feedback actions and persist ranking signals.
+4. ✅ Enable real lint/format scripts (ESLint + Prettier).
 3. Replace temporary lint/format script aliases with real ESLint/Prettier commands once package install constraints are resolved (blocked by registry policy in current environment).
 4. Validate CI in a fully provisioned Expo environment where `expo/tsconfig.base` is available.
 

@@ -13,6 +13,10 @@ export type TelemetryEventMap = {
     item_count: number;
     occasion: string;
   };
+  suggestion_feedback: {
+    outfit_id: string;
+    feedback: 'love_it' | 'not_for_today' | 'too_hot' | 'too_cold';
+  };
   weather_refresh_failed: {
     city: string;
     reason: string;

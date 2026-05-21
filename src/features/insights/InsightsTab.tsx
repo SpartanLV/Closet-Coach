@@ -1,13 +1,14 @@
 import React from 'react';
-import { StyleProp, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { Text, View } from 'react-native';
 import { FeatureCard } from '../../components/FeatureCard';
 import { SectionCard } from '../../components/SectionCard';
+import { TextStyleProp, ViewStyleProp } from '../types';
 import { WearLog } from '../../types';
 
 type InsightStyles = {
-  grid: StyleProp<ViewStyle>;
-  line: StyleProp<TextStyle>;
-  subtle: StyleProp<TextStyle>;
+  grid: ViewStyleProp;
+  line: TextStyleProp;
+  subtle: TextStyleProp;
 };
 
 type InsightsSummary = {

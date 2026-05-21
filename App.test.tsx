@@ -82,6 +82,7 @@ function createMockState(): ClosetState {
       lastContextRefresh: null,
       lastWeatherSnapshot: null,
     },
+    feedbackHistory: [],
   };
 }
 

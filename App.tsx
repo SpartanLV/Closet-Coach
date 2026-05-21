@@ -9,7 +9,7 @@ import { WardrobeTab } from './src/features/wardrobe/WardrobeTab';
 import { InsightsTab } from './src/features/insights/InsightsTab';
 import { useContextSync } from './src/hooks/useContextSync';
 import { colors, spacing } from './src/theme/tokens';
-import { Occasion, OutfitCandidate, Season, WardrobeCategory, WardrobeItem } from './src/types';
+import { Occasion, OutfitCandidate, Season, SuggestionFeedbackKind, WardrobeCategory, WardrobeItem } from './src/types';
 
 const tabs = ['Today', 'Wardrobe', 'Insights'] as const;
 type Tab = (typeof tabs)[number];
@@ -23,8 +23,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Today');
   const [form, setForm] = useState<WardrobeFormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const { state, isHydrated, addWardrobeItem, updateWardrobeItem, deleteWardrobeItem, setSettings, logWear, persistenceError, hydrationError, retryHydration } = useClosetState();
-  const { wardrobe, wearLogs, settings } = state;
+  const { state, isHydrated, addWardrobeItem, updateWardrobeItem, deleteWardrobeItem, setSettings, logWear, logFeedback, persistenceError, hydrationError, retryHydration } = useClosetState();
+  const { wardrobe, wearLogs, settings, feedbackHistory } = state;
   const [cityDraft, setCityDraft] = useState(settings.city);
 
   const { status, setStatus, weatherLoading, calendarLoading, calendarEventTitle, calendarOccasion, refreshWeather, syncCalendar } = useContextSync({ isHydrated, cityDraft, settings, setSettings });
@@ -32,7 +32,7 @@ export default function App() {
   const resolvedOccasion = settings.occasionOverride ?? calendarOccasion ?? 'Casual';
   const temperatureBucket = settings.lastWeatherSnapshot?.temperatureBucket ?? null;
   const temperatureLabel = settings.lastWeatherSnapshot?.weatherLabel ?? 'No weather context';
-  const ranked = useMemo(() => rankOutfits({ items: wardrobe, occasion: resolvedOccasion, temperatureBucket, temperatureLabel }), [wardrobe, resolvedOccasion, temperatureBucket, temperatureLabel]);
+  const ranked = useMemo(() => rankOutfits({ items: wardrobe, occasion: resolvedOccasion, temperatureBucket, temperatureLabel, feedbackHistory }), [wardrobe, resolvedOccasion, temperatureBucket, temperatureLabel, feedbackHistory]);
   const [suggestions, setSuggestions] = useState<OutfitCandidate[]>([]);
   useEffect(() => setSuggestions(ranked), [ranked]);
   useEffect(() => { if (isHydrated) setCityDraft(settings.city); }, [isHydrated, settings.city]);
@@ -63,6 +63,14 @@ export default function App() {
     consoleTelemetryService.track('wear_logged', { outfit_id: candidate.id, item_count: candidate.itemIds.length, occasion: resolvedOccasion });
     setStatus('Wear logged.');
   };
+
+  const onFeedback = (candidate: OutfitCandidate, kind: SuggestionFeedbackKind) => {
+    logFeedback({ outfitId: candidate.id, kind });
+    consoleTelemetryService.track('suggestion_feedback', { outfit_id: candidate.id, feedback: kind });
+    setStatus('Feedback saved.');
+  };
+  useEffect(() => { if (suggestions[0]) consoleTelemetryService.track('suggestion_viewed', { outfit_id: suggestions[0].id, score: Number(suggestions[0].score.toFixed(1)), suggestion_count: suggestions.length }); }, [suggestions]);
+
   const swap = (candidateId: string, category: WardrobeCategory) => {
     setSuggestions((current) => current.map((candidate) => candidate.id !== candidateId ? candidate : (swapCandidateItem({ candidate, items: wardrobe, category, occasion: resolvedOccasion, temperatureBucket, temperatureLabel }) ?? candidate)));
     consoleTelemetryService.track('suggestion_swapped', { outfit_id: candidateId, category });
@@ -74,7 +82,7 @@ export default function App() {
   if (!isHydrated) return <SafeAreaView style={styles.safeArea}><StatusBar style="dark" /><View style={styles.center}><ActivityIndicator color={colors.primary} /><Text style={styles.subtle}>Loading local closet data...</Text></View></SafeAreaView>;
 
   return <SafeAreaView style={styles.safeArea}><StatusBar style="dark" /><ScrollView contentContainerStyle={styles.container}><View><Text style={styles.eyebrow}>ClosetCoach Core Loop v1</Text><Text style={styles.title}>Interactive outfit planning</Text><Text style={styles.subtle}>Live weather, optional calendar, local persistence, and wear analytics.</Text></View><View style={styles.tabs}>{tabs.map((tab) => <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && styles.tabActive]}><Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>{tab}</Text></TouchableOpacity>)}</View>{status ? <Text style={styles.status}>{status}</Text> : null}{persistenceError ? <Text style={styles.warningStatus}>Storage warning: {persistenceError}</Text> : null}{hydrationError ? <View style={styles.inventory}><Text style={styles.warningStatus}>{hydrationError}</Text><TouchableOpacity style={styles.secondary} onPress={retryHydration}><Text style={styles.secondaryText}>Retry hydration</Text></TouchableOpacity></View> : null}
-    {activeTab === 'Today' ? <TodayTab styles={styles} onboarding={onboarding} cityDraft={cityDraft} setCityDraft={setCityDraft} refreshWeather={refreshWeather} weatherLoading={weatherLoading} syncCalendar={syncCalendar} calendarLoading={calendarLoading} temperatureLabel={temperatureLabel} settings={settings} calendarEventTitle={calendarEventTitle} resolvedOccasion={resolvedOccasion} setSettings={setSettings} suggestions={suggestions} wearLogs={wearLogs} missing={missing} wardrobe={wardrobe} swap={swap} wearCandidate={wearCandidate} formatDaysAgo={formatDaysAgo} /> : null}
+    {activeTab === 'Today' ? <TodayTab styles={styles} onboarding={onboarding} cityDraft={cityDraft} setCityDraft={setCityDraft} refreshWeather={refreshWeather} weatherLoading={weatherLoading} syncCalendar={syncCalendar} calendarLoading={calendarLoading} temperatureLabel={temperatureLabel} settings={settings} calendarEventTitle={calendarEventTitle} resolvedOccasion={resolvedOccasion} setSettings={setSettings} suggestions={suggestions} wearLogs={wearLogs} missing={missing} wardrobe={wardrobe} swap={swap} wearCandidate={wearCandidate} onFeedback={onFeedback} formatDaysAgo={formatDaysAgo} /> : null}
     {activeTab === 'Wardrobe' ? <WardrobeTab styles={styles} editingId={editingId} form={form} setForm={setForm} toggleFormOccasion={toggleFormOccasion} saveItem={saveItem} setEditingId={setEditingId} emptyForm={emptyForm} wardrobe={wardrobe} editItem={(item: WardrobeItem) => { setEditingId(item.id); setForm({ name: item.name, color: item.color, category: item.category, season: item.season, occasionTags: item.occasionTags.length ? item.occasionTags : ['Casual'] }); }} deleteWardrobeItem={deleteWardrobeItem} formatDaysAgo={formatDaysAgo} /> : null}
     {activeTab === 'Insights' ? <InsightsTab styles={styles} insights={insights} wearLogs={wearLogs} /> : null}
   </ScrollView></SafeAreaView>;
