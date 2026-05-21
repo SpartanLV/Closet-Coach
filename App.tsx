@@ -69,6 +69,7 @@ export default function App() {
     consoleTelemetryService.track('suggestion_feedback', { outfit_id: candidate.id, feedback: kind });
     setStatus('Feedback saved.');
   };
+  useEffect(() => { if (suggestions[0]) consoleTelemetryService.track('suggestion_viewed', { outfit_id: suggestions[0].id, score: Number(suggestions[0].score.toFixed(1)), suggestion_count: suggestions.length }); }, [suggestions]);
 
   const swap = (candidateId: string, category: WardrobeCategory) => {
     setSuggestions((current) => current.map((candidate) => candidate.id !== candidateId ? candidate : (swapCandidateItem({ candidate, items: wardrobe, category, occasion: resolvedOccasion, temperatureBucket, temperatureLabel }) ?? candidate)));
